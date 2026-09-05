@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
+# runs/*.json  ← 골격 기본값. 우리 볼트는 추적한다 (2026-09-01)
+#   게이트 통과 기록은 '무엇을 보고 왜 넘겼는가'라는 판단 증거라
+#   PC 가 바뀌어도 남아야 한다. mydomain/app/runs/ 도 같은 이유로 추적 중.
 .streamlit/secrets.toml
