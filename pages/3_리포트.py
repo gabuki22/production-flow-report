@@ -167,41 +167,54 @@ with body:
                         f"검증이 잡은 것을 문서에서 빼면 <b>그 경고는 없던 일이 "
                         f"됩니다.</b> 뺀 이유를 게이트 3 근거에 적으십시오.")
     else:
-        # ★ 사람이 쓰는 2·6·8장을 **한 폼으로** 묶는다 (Day4 프롬프트 10 그대로).
-        #   따로 두면 한 글자 칠 때마다 화면 전체가 다시 돌아 긴 해석을 쓰다 만다.
-        #   st.form 은 제출을 누를 때까지 재실행하지 않는다.
+        # ★ 2026-09-05 — **번호를 눌러 한 칸씩 쓴다.**
+        #   전에는 2·6·8 을 한 폼에 쌓아 뒀는데, 어느 칸을 쓰는 중인지 눈이
+        #   흩어지고 스크롤이 길어져 **아래 두 칸이 자주 빈 채로 남았다.**
+        #   한 칸만 보이면 그 칸을 쓴다.
         #
-        #   ⚠️ 폼 안에서는 위젯이 서로를 못 본다 — 여기는 독립된 세 칸이라 괜찮다.
+        #   폼은 그대로 둔다(Day4 프롬프트 10) — 한 글자 칠 때마다 화면이 다시
+        #   돌면 긴 해석을 쓰다 만다. st.form 은 제출 전까지 재실행하지 않는다.
         #
-        #   목차에서 어느 사람 장을 골라도 셋이 같이 나오므로 **고른 장만 표시**한다.
-        #   그 표시가 없으면 왜 셋이 뜨는지 모른다.
-        #   ("세 장을 한 번에 씁니다" 안내는 뺐다 — 세 칸이 보이는데 세 칸이라고
-        #    또 적는 것은 읽는 사람의 시간을 쓰는 일이다)
+        #   ⚠️ 고르는 것은 **폼 밖**에 둔다. 폼 안에 넣으면 제출을 누르기 전까지
+        #      재실행이 없어서 번호를 눌러도 칸이 안 바뀐다.
+        #   ⚠️ 칸을 바꾸면 저장 안 한 글은 사라진다. 자동 저장을 안 하기로 한
+        #      결정 그대로라 없애지 않고 **경고를 붙인다.**
         humans = [s for s in secs if s["kind"] == "human"]
 
+        def _tab(h):
+            no, name = h["title"].split(".", 1)
+            return f"{no.strip()} {name.strip()}" + ("  ✓" if h["body"].strip() else "")
+
+        tabs = {_tab(h): h for h in humans}
+        # 목차에서 고른 장이 기본으로 열린다 — 고른 것과 열린 것이 다르면
+        # 왜 다른 칸이 떴는지 설명할 길이 없다.
+        cur = next((_tab(h) for h in humans if h["title"] == sec["title"]),
+                   _tab(humans[0]))
+        picked = st.segmented_control("사람이 쓰는 장", list(tabs), default=cur,
+                                      key="hpick", label_visibility="collapsed")
+        hsec = tabs.get(picked) or tabs[cur]
+
         with st.form("사람이 쓰는 장"):
-            typed = {}
-            for h in humans:
-                고름 = h["title"] == sec["title"]
-                st.markdown(
-                    (f"**{h['title']}**" if not 고름
-                     else f"**{h['title']}**　<span style=\"font-size:12px;"
-                          f"color:{C.BRAND['primary']}\">← 목차에서 고른 장</span>"),
-                    unsafe_allow_html=True)
-                typed[h["title"]] = st.text_area(
-                    h["title"], value=h["body"], height=170,
-                    key=f"h_{h['title']}", label_visibility="collapsed",
-                    placeholder=h["placeholder"])
-            saved = st.form_submit_button("저장", type="primary")
+            st.markdown(f"**{hsec['title']}**")
+            typed = st.text_area(
+                hsec["title"], value=hsec["body"], height=240,
+                key=f"h_{hsec['title']}", label_visibility="collapsed",
+                placeholder=hsec["placeholder"])
+            c1, c2 = st.columns([1, 4])
+            with c1:
+                saved = st.form_submit_button("저장", type="primary")
+            with c2:
+                st.caption("　다른 번호로 넘어가기 전에 저장하십시오 — "
+                           "안 누르면 쓰던 글이 사라집니다")
 
         if saved:
-            st.session_state.human.update(typed)
+            st.session_state.human[hsec["title"]] = typed
             # 누른 것만 남긴다 — 자동 저장은 안 한다(교안 프롬프트 10)
             gates.save_human(st.session_state.human)
             st.session_state.human_saved_at = None    # 아래에서 다시 읽는다
             # 걸려도 저장은 한다. 사람의 문장이라 고칠지는 사람이 정한다.
-            hits = {k: S.check_phrasing(v) for k, v in typed.items()
-                    if v and S.check_phrasing(v)}
+            hits = ({hsec["title"]: S.check_phrasing(typed)}
+                    if typed and S.check_phrasing(typed) else {})
             # rerun 하면 이 자리의 안내가 지워진다 — 세션에 담아 넘긴다.
             st.session_state.save_msg = hits or True
             st.rerun()
@@ -343,17 +356,22 @@ with c2:
                        f"{' · '.join(blocked)}")
         else:
             ok = st.text_input('확인 문구로 "발송"을 입력하십시오', key="g3")
+            # ★ 2026-09-05 — 여기도 한 번 눌러 넘어갈 수 있게. 다만 확인 문구
+            #   "발송"은 그대로 둔다. **되돌릴 수 없는 유일한 게이트**라 두 손이
+            #   필요하다 — 고르는 손과, 발송이라고 치는 손.
+            pick3 = st.pills("빠른 근거", C.GATE_PRESETS[3], key="g3pick")
             note = st.text_input(
-                "통과 근거 (기록에 남습니다)", key="g3note",
+                "직접 적기 (기록에 남습니다)", key="g3note",
                 placeholder="예: 초안 확정. 실제 발송 없음. 게이트 통과 기록만 남김. "
                             "합성 데이터라 실제 보고에 쓸 수 없음 — 한계 N건 명시함")
-            enough3 = len(note.strip()) >= C.GATE_NOTE_MIN
+            reason3 = note.strip() or (pick3 or "")
+            enough3 = len(reason3) >= C.GATE_NOTE_MIN
             if st.button("확정", disabled=(ok != "발송" or not enough3)):
-                gates.pass_gate(run, 3, note)
+                gates.pass_gate(run, 3, reason3)
                 gates.save(run)
                 st.rerun()
             if not enough3:
-                st.caption(f"　통과 근거를 {C.GATE_NOTE_MIN}자 이상 적어야 합니다. "
-                           f"게이트 1·2의 근거와 나란히 아카이브에 남습니다.")
+                st.caption(f"　위에서 하나 고르거나 {C.GATE_NOTE_MIN}자 이상 "
+                           f"직접 적으십시오. 게이트 1·2의 근거와 나란히 남습니다.")
     else:
         st.caption("게이트 2를 통과해야 발송 확정 단계가 열립니다.")

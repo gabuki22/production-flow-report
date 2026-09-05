@@ -1,4 +1,4 @@
-streamlit>=1.36
+streamlit>=1.45          # st.pills · st.segmented_control (1.40+)
 pandas>=2.0
 numpy>=1.24
 pyarrow>=14.0

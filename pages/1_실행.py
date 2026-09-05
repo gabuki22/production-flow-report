@@ -120,14 +120,21 @@ if run["step"] >= 3 and not gates.is_passed(run, 1):
              '되돌릴 수 있는 게이트입니다.</div></div>')
     st.markdown(body, unsafe_allow_html=True)
 
-    note = st.text_input("판단 근거 (기록에 남습니다)",
+    # ★ 2026-09-05 — **한 번 눌러 바로 통과할 수 있게.** 근거 칸을 매번 손으로
+    #   채우는 것이 벽이 됐다. 칸을 없애면 9/4에 고친 자리(note="")로 돌아가므로
+    #   **고르게** 했다. 문구는 config.GATE_PRESETS 한 곳에만 있다.
+    #   직접 친 글이 있으면 그것이 이긴다 — 고른 것은 기본값이지 정답이 아니다.
+    pick = st.pills("빠른 근거 — 하나 누르면 바로 통과할 수 있습니다",
+                    C.GATE_PRESETS[1]["warn" if warns else "clean"], key="g1pick")
+    note = st.text_input("직접 적기 (기록에 남습니다)", key="g1note",
                          placeholder="예: 날짜 범위 경고는 추출 시점 차이라 그 행만 빼고 진행")
+    reason = note.strip() or (pick or "")
     # ★ 2026-09-04 (Day3 프롬프트 11) — **근거 없이는 통과시키지 않는다.**
     #   기존 기록을 열어 보니 게이트 1·2 가 둘 다 note="" 로 남아 있었다.
     #   "게이트1 ✓ 게이트2 ✓" 만 있고 무엇을 보고 통과시켰는지가 없으면
     #   거버넌스 기록이 아니라 통과 도장일 뿐이다. 나중에 이 실행을 다시 꺼낼
     #   사람은 "왜 통과였지"에 답할 수 없다.
-    enough = len(note.strip()) >= C.GATE_NOTE_MIN
+    enough = len(reason) >= C.GATE_NOTE_MIN
     a, b = st.columns([1, 1])
     with a:
         if st.button("되돌리기"):
@@ -136,7 +143,7 @@ if run["step"] >= 3 and not gates.is_passed(run, 1):
     with b:
         if st.button("통과시키기", type="primary",
                      disabled=not (s["can_pass"] and enough)):
-            gates.pass_gate(run, 1, note)
+            gates.pass_gate(run, 1, reason)
             gates.advance(run, "게이트1")
             # 2026-09-01 추가 — 골격은 게이트 2에서만 저장한다. Day1에는 계산을
             # 아직 안 만들어 게이트 2에 못 가므로 통과 근거가 어디에도 안 남는다.
@@ -146,8 +153,8 @@ if run["step"] >= 3 and not gates.is_passed(run, 1):
     if not s["can_pass"]:
         st.error("차단 항목이 있어 통과할 수 없습니다.")
     elif not enough:
-        st.caption(f"　판단 근거를 {C.GATE_NOTE_MIN}자 이상 적어야 통과시킬 수 "
-                   f"있습니다. 이 문장이 아카이브에 그대로 남습니다.")
+        st.caption(f"　위에서 하나 고르거나 {C.GATE_NOTE_MIN}자 이상 직접 적으십시오. "
+                   f"이 문장이 아카이브에 그대로 남습니다.")
 
 # ── 4. 계산 ───────────────────────────────────────────────────────
 if gates.is_passed(run, 1):
@@ -203,9 +210,16 @@ if gates.is_passed(run, 1) and not gates.is_passed(run, 2):
                 f'계산 결과가 상식에 맞는지, 이전 기간과 크게 다르지 않은지 '
                 f'확인하십시오. 되돌릴 수 있습니다.</div></div>',
                 unsafe_allow_html=True)
-    note2 = st.text_input("판단 근거", key="g2",
+    # ★ 2026-09-05 — **한 번 눌러 바로 통과할 수 있게.** 근거 칸을 매번 손으로
+    #   채우는 것이 벽이 됐다. 칸을 없애면 9/4에 고친 자리(note="")로 돌아가므로
+    #   **고르게** 했다. 문구는 config.GATE_PRESETS 한 곳에만 있다.
+    #   직접 친 글이 있으면 그것이 이긴다 — 고른 것은 기본값이지 정답이 아니다.
+    pick2 = st.pills("빠른 근거 — 하나 누르면 바로 통과할 수 있습니다",
+                     C.GATE_PRESETS[2], key="g2pick")
+    note2 = st.text_input("직접 적기", key="g2",
                           placeholder="예: 납기 준수율 91.3%는 직전 기간과 유사, 자릿수 이상 없음")
-    enough2 = len(note2.strip()) >= C.GATE_NOTE_MIN
+    reason2 = note2.strip() or (pick2 or "")
+    enough2 = len(reason2) >= C.GATE_NOTE_MIN
     a, b = st.columns([1, 1])
     with a:
         if st.button("되돌리기", key="r2"):
@@ -214,13 +228,13 @@ if gates.is_passed(run, 1) and not gates.is_passed(run, 2):
     with b:
         if st.button("통과시키기", type="primary", key="p2",
                      disabled=not enough2):
-            gates.pass_gate(run, 2, note2)
+            gates.pass_gate(run, 2, reason2)
             gates.advance(run, "대시보드")
             gates.save(run)
             st.rerun()
     if not enough2:
-        st.caption(f"　판단 근거를 {C.GATE_NOTE_MIN}자 이상 적어야 통과시킬 수 "
-                   f"있습니다. 게이트 1의 근거와 **나란히** 아카이브에 남습니다.")
+        st.caption(f"　위에서 하나 고르거나 {C.GATE_NOTE_MIN}자 이상 직접 적으십시오. "
+                   f"게이트 1의 근거와 **나란히** 아카이브에 남습니다.")
 
 if gates.is_passed(run, 2):
     gates.advance(run, "리포트")
