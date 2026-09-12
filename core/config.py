@@ -66,6 +66,20 @@ SHOW_SYNTHETIC_NOTE = False
 #   ⚠️ 끄면 추정치가 실측처럼 읽힌다. **회사 결재본은 True.** 지우지 않고 플래그로 둔 이유다.
 SHOW_ESTIMATE_NOTE = False
 PERIOD = ("2025-09-01", "2026-08-29")
+
+# ── 데이터 출처 — parquet 인가 BigQuery 인가 (2026-09-12 기쁨 "빅쿼리랑 연결") ─────
+#   ★ 기본은 **parquet**. 배포본(스트림릿 클라우드)은 인증이 없어 parquet 만 읽는다.
+#   ★ 내 PC 에서 BigQuery 로 읽으려면 **파일이 아니라 환경**으로 켠다 —
+#     `.streamlit/secrets.toml` 에 `data_source = "bigquery"` (배포제외 목록에 있어 안 나간다)
+#     또는 환경변수 `PFR_SOURCE=bigquery`. 코드를 고쳐 켜면 배포본까지 켜진다.
+#   ⚠️ 올린 곳(_generator/to_bigquery.py)과 읽는 곳(load.py)이 **이 세 값**을 같이 쓴다.
+BQ_PROJECT = "stately-banner-448607-p1"
+BQ_DATASET = "production_flow"
+BQ_LOCATION = "US"
+#   ⚠️ 2026-09-12 — asia-northeast3 로 맞추려 했으나 **`production_flow` 가 이미 US 에 있었다**
+#     (예전 도구가 US 로 만들어 둔 것 · `create_dataset(exists_ok=True)` 는 위치를 안 바꾼다).
+#     읽는 쪽이 다른 위치를 대면 404 가 난다. 옮기려면 데이터셋을 지우고 다시 올려야 한다 — 기쁨 결정 사항.
+DATA_SOURCE_DEFAULT = "parquet"
 # ★ 2026-09-05 — **앱 이름을 우리 것으로 바꿨다.**
 #   물음: *"제목은 왜 성장퍼널이야?"*
 #   골격이 통신사 것이라 이름도 통신사 말이었다. 퍼널 단계도 지표도

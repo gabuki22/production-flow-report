@@ -77,6 +77,32 @@ READERS = {
 }
 
 
+def data_source() -> str:
+    """어디서 읽는가 — `"parquet"`(기본) 또는 `"bigquery"`.
+
+    ★ **환경으로 정한다, 코드로 정하지 않는다** (2026-09-12). 순서: 환경변수 `PFR_SOURCE`
+      → `.streamlit/secrets.toml` 의 `data_source` → config 기본값.
+      배포본에는 둘 다 없어 parquet 로 떨어진다 — 클라우드에 인증을 두지 않는다.
+    """
+    import os
+    v = os.environ.get("PFR_SOURCE")
+    if not v:
+        try:
+            v = st.secrets.get("data_source")          # 파일이 없으면 예외
+        except Exception:
+            v = None
+    v = (v or C.DATA_SOURCE_DEFAULT).lower()
+    return v if v in ("parquet", "bigquery") else C.DATA_SOURCE_DEFAULT
+
+
+def _from_bigquery(name: str) -> pd.DataFrame:
+    """BigQuery 에서 표 하나를 통째로. 올릴 때 문자열로 둔 날짜는 문자열로 돌아온다 —
+    parquet 과 **같은 모양**이어야 계산이 갈리지 않는다(`_generator/to_bigquery.py` 참조)."""
+    from google.cloud import bigquery
+    c = bigquery.Client(project=C.BQ_PROJECT, location=C.BQ_LOCATION)
+    return c.query(f"SELECT * FROM `{C.BQ_PROJECT}.{C.BQ_DATASET}.{name}`").to_dataframe()
+
+
 @st.cache_data(show_spinner=False)
 def load_table(name: str) -> pd.DataFrame:
     """테이블 하나를 읽는다. 캐시되므로 앱 수명 동안 1회만 읽는다.
@@ -87,7 +113,11 @@ def load_table(name: str) -> pd.DataFrame:
     큰 데이터는 parquet 이 훨씬 작고 빠르다. CSV 78MB 가 parquet 11MB 가 된다.
 
         df.to_parquet("data/내테이블.parquet")
+
+    ★ `data_source()` 가 `"bigquery"` 면 파일 대신 BigQuery 에서 읽는다 — 같은 optimize 를 거친다.
     """
+    if data_source() == "bigquery":
+        return optimize(_from_bigquery(name))
     for ext, reader in READERS.items():
         path = C.DATA_DIR / f"{name}{ext}"
         if path.exists():
@@ -113,8 +143,9 @@ def load_all() -> dict[str, pd.DataFrame]:
 
     파일이 하나도 없으면 예외 대신 **안내로 멈춘다.** 화면에 무엇을 해야 하는지 뜬다.
     """
-    missing = [t for t in C.TABLES if find_file(t) is None]
-    if len(missing) == len(C.TABLES):
+    # BigQuery 모드는 파일이 없어도 정상이다 — 파일 안내는 parquet 모드에서만
+    missing = [] if data_source() == "bigquery" else [t for t in C.TABLES if find_file(t) is None]
+    if missing and len(missing) == len(C.TABLES):
         todo("Day1 준비", "내 데이터를 연결하십시오",
              "data/ 폴더가 비어 있습니다. 7주차에 받은 parquet 을 그대로 복사하거나, "
              "내 파일(parquet · csv · 엑셀)을 넣고 config.TABLES 에 이름을 적으십시오.",

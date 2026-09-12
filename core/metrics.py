@@ -249,6 +249,111 @@ def metric_by(t: dict, dim: str) -> pd.DataFrame:
 
 
 
+def funnel_parts(t: dict) -> pd.DataFrame:
+    """퍼널을 **도번 단위**로 읽는다 — 구간마다 *멈춘 발주가 하나라도 있는 도번 수*.
+
+    (2026-09-12 기쁨 *"모든 기준은 도번으로, 고유값"* → *"도번 단위로 전부 다시 쓴다"*)
+
+    ⚠️ 도번 **도달** 수로는 못 센다 — 도번당 발주가 38~88건이라 11단계 전부 1,200개다
+      (실측 · 교안 기준으로 퍼널 불성립). 그래서 도달이 아니라 **멈춤**을 도번으로 센다:
+        구간 a→b 에서 멈춘 발주 = a 에는 닿았는데 b 에는 안 닿은 발주(완주 코호트)
+        멈춘 도번            = 그런 발주를 하나라도 가진 도번
+    발주 단위 `funnel()` 과 같은 재료(`first_reach`·`mature_ids`)를 쓴다 — 두 곳에서 따로 세면 갈린다.
+
+    반환: DataFrame[step, label, 도번전체, n, drop, 멈춘발주, 도번당중앙, 도번당최대, is_bottleneck]
+        n              그 구간에서 멈춘 발주가 **없는** 도번 수   (첫 단계는 도번전체)
+        drop           그 구간에서 멈춘 발주가 **있는** 도번 수   (첫 단계는 0)
+        멈춘발주        그 구간에서 멈춘 발주 건수 (= funnel().drop 과 같아야 한다 — 검산)
+        is_bottleneck  drop 이 가장 큰 구간
+      `n`·`drop`·`label`·`is_bottleneck` 이름을 `funnel()` 과 맞춰 둔 것은 **같은 그림 함수**
+      (`funnel_svg`)가 그리게 하려는 것이다.
+    attrs: 도번전체 · 깨끗한도번(어느 구간에서도 멈춘 발주가 없는 도번)
+    """
+    o = t["orders"]
+    fr = first_reach(t["order_events"])
+    mature = mature_ids(o)
+    part_of = o.set_index("수주ID")["제품도번"].astype(str)
+    reach = {s: set(fr.loc[fr["이벤트구분"] == s, "수주ID"]) & mature for s in C.FUNNEL_STEPS}
+    all_parts = set(part_of.loc[list(mature)].unique())
+    rows, dirty = [], set()
+    prev = None
+    for s in C.FUNNEL_STEPS:
+        if prev is None:
+            rows.append({"step": s, "label": C.FUNNEL_LABELS.get(s, s), "도번전체": len(all_parts),
+                         "n": len(all_parts), "drop": 0, "멈춘발주": 0,
+                         "도번당중앙": 0.0, "도번당최대": 0})
+        else:
+            stuck = reach[prev] - reach[s]
+            per = part_of.loc[list(stuck)].value_counts() if stuck else pd.Series(dtype=int)
+            dirty |= set(per.index)
+            rows.append({"step": s, "label": C.FUNNEL_LABELS.get(s, s), "도번전체": len(all_parts),
+                         "n": len(all_parts) - len(per), "drop": int(len(per)), "멈춘발주": int(len(stuck)),
+                         "도번당중앙": float(per.median()) if len(per) else 0.0,
+                         "도번당최대": int(per.max()) if len(per) else 0})
+        prev = s
+    f = pd.DataFrame(rows)
+    f["is_bottleneck"] = f["drop"] == f["drop"].max()
+    f.attrs["도번전체"] = len(all_parts)
+    f.attrs["깨끗한도번"] = len(all_parts - dirty)
+    f.attrs["그레인"] = "도번"
+    return f
+
+
+def metric_by_parts(t: dict, dim: str) -> pd.DataFrame:
+    """축별 납기 준수율을 **도번 단위**로 — 칸 안 도번들의 준수율 **평균**.
+
+    (2026-09-12 기쁨 *"모든 기준은 도번으로"*. `metric_by` 는 발주 가중이라 발주가 많은
+     도번이 칸을 끌고 간다. 도번 평균은 도번 하나를 하나로 센다.)
+
+    반환: DataFrame[<dim>, 도번, 분모, 준수, 준수율, 발주가중준수율, 비중, 저조도번, 표본부족]
+        도번            그 칸의 제품도번 수
+        분모 · 준수      그 칸 발주 합(납기 도래 · 기한 내) — **크기(격차 × 분모)는 발주 건으로 센다**
+        준수율          도번 준수율의 평균  ← 문장·그림이 쓰는 값
+        발주가중준수율    `metric_by` 와 같은 값(검산용). 둘의 차이는 0.07%p 이내(실측)
+        비중            전체 도번 중 이 칸의 도번 비중
+        저조도번        준수율 < config.LATE_PART_THRESHOLD 인 도번 수
+        표본부족        분모(발주) < MIN_SAMPLE — `metric_by` 와 같은 기준
+      컬럼 이름 `분모·준수·준수율·비중·표본부족` 은 `metric_by` 와 맞춰 두었다 — 같은 문장·그림
+      함수가 받게 하려는 것이다.
+    ★ `part_facts()` 를 재료로 쓴다 — 도번 준수율을 두 곳에서 따로 세지 않는다.
+    """
+    pf = part_facts(t)
+    if dim not in pf.columns:
+        raise KeyError(f"part_facts 에 {dim!r} 열이 없다")
+    g = (pf.groupby(dim, observed=True)
+           .agg(도번=("제품도번", "size"), 분모=("발주", "sum"), 준수=("준수", "sum"),
+                준수율=("준수율", "mean"),
+                저조도번=("준수율", lambda s: int((s < C.LATE_PART_THRESHOLD).sum())))
+           .reset_index())
+    g["발주가중준수율"] = g["준수"] / g["분모"]
+    g["비중"] = g["도번"] / g["도번"].sum()
+    g["표본부족"] = g["분모"] < C.MIN_SAMPLE
+    return g.sort_values("분모", ascending=False).reset_index(drop=True)
+
+
+SURROGATE_KEY_COLS = ("고객사", "제품도번", "수량", "수주일")   # notes/11 (b) — 정확도 99.9%
+
+
+def surrogate_key(o: pd.DataFrame) -> pd.Series:
+    """발주 한 건을 가리키는 **대리 키** — 실 ERP 에는 수주ID 가 없다 (2026-09-12 · notes/11).
+
+    합성 데이터의 `수주ID` 는 우리가 붙인 것이라 실 ERP 에서는 못 쓴다. 거기서 발주 한 건은
+    **고객사 + 제품도번 + 수량 + 접수일**로만 가려진다. 같은 날 같은 고객이 같은 도번을 같은
+    수량으로 두 번 주문하면 한 건으로 묶인다 — 그 오차가 0.1%(notes/11 실측 126건).
+    반환: 문자열 Series (orders 와 같은 순서). 실 ERP 를 붙이는 날 `수주ID` 자리에 이것을 넣는다.
+    """
+    return o[list(SURROGATE_KEY_COLS)].astype(str).agg("|".join, axis=1)
+
+
+def surrogate_key_check(t: dict) -> dict:
+    """대리 키가 수주ID 를 얼마나 대신하는가 — {발주, 고유키, 묶인건수, 정확도}.
+    정확도 = 고유 키 수 ÷ 발주 수. notes/11 의 99.9% 가 지금 데이터에서도 나오는지 검산한다."""
+    o = t["orders"]
+    k = surrogate_key(o)
+    return {"발주": int(len(o)), "고유키": int(k.nunique()),
+            "묶인건수": int(len(o) - k.nunique()), "정확도": float(k.nunique() / len(o))}
+
+
 def part_facts(t: dict) -> pd.DataFrame:
     """**제품도번 1개 = 한 줄.** 오늘의 그레인이다 (2026-09-12).
 
@@ -1614,7 +1719,9 @@ def proposal_topics(t: dict) -> list[dict]:
 
     for dim in C.DIMS:
         # ②′ 주지표(납기 준수율) — 우리가 실제로 쓰는 쪽
-        g = metric_by(t, dim)
+        # ★ 2026-09-12 — **도번 평균**(`metric_by_parts`). 발주 가중(`metric_by`)은 같은
+        #   표의 `발주가중준수율` 로 남아 검산에 쓴다. 크기(격차 × 분모)는 발주 건 그대로.
+        g = metric_by_parts(t, dim)
         g = g[g["분모"] >= C.MIN_SAMPLE]          # 비교 자체가 안 되는 칸은 뺀다
         if len(g) >= 2:
             hi = g["준수율"].max()
@@ -1633,12 +1740,12 @@ def proposal_topics(t: dict) -> list[dict]:
                 "키": f"축·{dim}·납기",
                 "제목": f"{dim} {big[dim]} 의 납기 준수율이 가장 많이 벌어져 있다",
                 "한줄": (f'{dim} {C.josa(big[dim], "이")} '
-                        f'{big["준수율"]*100:.2f}% '
-                        f'({int(big["준수"]):,} / {int(big["분모"]):,}) 로 '
+                        f'{C.GRAIN_UNIT} {int(big["도번"]):,}개 평균 {big["준수율"]*100:.2f}% '
+                        f'(발주로는 {int(big["준수"]):,} / {int(big["분모"]):,}) 로 '
                         f'가장 높은 {C.josa(dim, "과")} '
                         f'{gap:.2f}%p 벌어져 있습니다. '
                         f'이 {C.josa(dim, "이")} '
-                        f'전체의 {big["비중"]*100:.2f}% 라 '
+                        f'전체 {C.GRAIN_UNIT}의 {big["비중"]*100:.1f}% 라 '
                         f'가장 많은 건수가 걸려 있습니다.'
                         + ("" if 같은칸 else
                            f' 더 많이 벌어진 {C.josa(dim, "은")} '
@@ -1770,8 +1877,12 @@ def topic_evidence(t: dict, topic: dict) -> dict:
     구간 = topic.get("구간")
 
     # ── 현황 — 퍼널 전체 ────────────────────────────────────────
-    f = funnel(t)
+    # ★ 2026-09-12 — 현황은 **도번 단위**(`funnel_parts`). 발주 단위 `funnel()` 은
+    #   지우지 않고 `현황_발주` 로 둔다(재료 · 검산). 두 표의 멈춘 발주 수는 같아야 한다.
+    fo = funnel(t)
+    f = funnel_parts(t)
     ev["현황"] = f
+    ev["현황_발주"] = fo
     ev["현황_없는사유"] = None
     ev["현황_병목"] = (str(f.loc[f["is_bottleneck"], "label"].iloc[0])
                      if f["is_bottleneck"].any() else None)
@@ -1780,7 +1891,7 @@ def topic_evidence(t: dict, topic: dict) -> dict:
     # ⚠️ **전환율이 아니라 납기 준수율**이다. 전환율로는 세 축 전부 0.3%p 미만이라
     #    표를 그려도 칸 사이에 차이가 안 보인다 (2026-09-09 실측).
     if dim in C.DIMS:
-        g = metric_by(t, dim)
+        g = metric_by_parts(t, dim)              # 2026-09-12 도번 평균 (발주 가중은 같은 표에)
         hi = g["준수율"].max()
         g = g.assign(격차=(hi - g["준수율"]) * 100)
         g = g.assign(건수=g["격차"] / 100 * g["분모"])
@@ -1791,7 +1902,8 @@ def topic_evidence(t: dict, topic: dict) -> dict:
         ev["원인_최대칸"] = str(g.loc[g["건수"].idxmax()][dim])
         # ⚠️ 같은 "납기 준수율"인데 **분모가 둘**이다. 나란히 인용하면 다른 두 수를
         #    같은 것처럼 쓰게 되므로 **어느 분모인지 키에 적어 둔다.**
-        ev["원인_분모"] = f"완주 코호트 중 납기 도래 {int(g['분모'].sum()):,}건"
+        ev["원인_분모"] = (f"{C.GRAIN_UNIT} {int(g['도번'].sum()):,}개 · "
+                        f"완주 코호트 중 납기 도래 발주 {int(g['분모'].sum()):,}건")
         ev["지표_분모"] = kpis(t).get("납기 준수율", {}).get("note")
     else:
         ev["원인"] = None
@@ -1813,6 +1925,8 @@ def topic_evidence(t: dict, topic: dict) -> dict:
         f"365.25일로 환산했습니다",
         "지금 벌어진 차이가 그대로 유지된다고 보았습니다",
         "가장 나은 쪽까지 따라간다고 보지 않았습니다 — 그 가정에는 근거가 없습니다",
+        # 2026-09-12 도번 단위 — 격차(%p)는 도번 준수율 평균으로, 건수는 그 칸의 발주 수로 환산
+        f"벌어진 폭은 {C.GRAIN_UNIT} 준수율의 평균으로 재고, 건수는 그쪽 {C.GRAIN_SUB} 수에 곱했습니다",
     ]
 
     # ── 금액 (2026-09-11 Day4) ────────────────────────────────────
@@ -1878,16 +1992,16 @@ def topic_evidence(t: dict, topic: dict) -> dict:
     #   고객사 차이 0.60%p 가 색상 차이 1.51%p 로 전부 설명됐다.
     #   기쁨 정정: *"칼라는 차종별이지 고객사별이 아님"* — 차종→색상이 실제 구조.
     #   고객사로 쪼개면 **색을 가리고 "그 고객사가 문제"로 읽힌다.** 색상으로 낸다.
+    #   ★ 2026-09-12 — **도번 단위**: 색상별 도번 준수율 평균 · 늦은 발주 수는 그대로 발주 건.
     try:
-        f = order_facts(t["orders"], t["order_events"])
-        m2 = f[f["완주"] & f["납기도래"]]
-        if dim and val and dim in m2.columns:
-            m2 = m2[m2[dim] == val]
-        g2 = (m2.groupby("색상", observed=True)["납기내출하"]
-                .agg(발주="size", 준수="sum"))
+        pf = part_facts(t)
+        if dim and val and dim in pf.columns:
+            pf = pf[pf[dim] == val]
+        g2 = (pf.groupby("색상", observed=True)
+                .agg(도번=("제품도번", "size"), 발주=("발주", "sum"), 준수=("준수", "sum"),
+                     준수율=("준수율", "mean")))
         g2 = g2[g2["발주"] > 0]
         g2["미준수"] = g2["발주"] - g2["준수"]
-        g2["준수율"] = g2["준수"] / g2["발주"]
         g2 = g2.sort_values("준수율")
         ev["색상내역"] = [(str(k), int(r.미준수), float(r.준수율))
                        for k, r in g2.iterrows()]

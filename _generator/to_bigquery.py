@@ -32,16 +32,16 @@ sys.path.insert(0, str(ROOT))
 
 from core import config as C            # noqa: E402
 
-PROJECT = "stately-banner-448607-p1"
-DATASET = "production_flow"
-LOCATION = "US"
+# ★ 프로젝트·데이터셋·위치는 config 한 곳에서 읽는다 — 로더(load.py)와 같은 값이어야
+#   올린 곳과 읽는 곳이 갈리지 않는다. (2026-09-12 · 전에는 여기 US 로 박혀 있었다)
+PROJECT, DATASET, LOCATION = C.BQ_PROJECT, C.BQ_DATASET, C.BQ_LOCATION
 
 # 올릴 표 — 앱이 읽는 것과 같다(config.TABLES). 목록을 여기 또 적지 않는다.
 TABLES = list(C.TABLES)
 
-NOTE = ("성우산업 생산 흐름 (합성 데이터). "
+NOTE = (f"{C.DATASET} (합성 데이터). "
         "실 ERP 반출 불가로 스키마·값 체계만 복제했다. "
-        "그레인 = 발주 1건(수주ID). 판정은 실데이터로만 할 수 있다.")
+        f"그레인 = {C.GRAIN}. 판정은 실데이터로만 할 수 있다.")
 
 
 def _client():

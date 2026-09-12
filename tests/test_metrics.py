@@ -661,5 +661,28 @@ else:
           "  · 감춘 실험이 「못 쓰는 숫자」에 이름으로 있다",
           " · ".join(r["id"] for r in _hidden))
 
+
+# ── 도번 단위 대조 (2026-09-12 · 기쁨 "모든 기준은 도번으로") ────────────
+print("\n도번 단위 — 발주 단위와 어긋나지 않는가")
+_fp, _fo = M.funnel_parts(t), M.funnel(t)
+check((_fp["멈춘발주"].iloc[1:].to_numpy() == _fo["drop"].iloc[1:].to_numpy()).all(),
+      "  · funnel_parts 의 구간별 멈춘 발주 수 == funnel 의 빠짐 수 (11구간)",
+      f"{int(_fp['멈춘발주'].sum()):,} vs {int(_fo['drop'].iloc[1:].sum()):,}")
+check(int(_fp.iloc[0]["n"]) == _fp.attrs.get("도번전체") and (_fp["n"] + _fp["drop"] == _fp.attrs.get("도번전체")).all(),
+      "  · 구간마다 멈춘 도번 + 안 멈춘 도번 = 도번 전체", f"{_fp.attrs.get('도번전체')}")
+_mp, _mo = M.metric_by_parts(t, C.DIMS[1]), M.metric_by(t, C.DIMS[1])
+_j2 = _mp.merge(_mo[[C.DIMS[1], "준수율"]].rename(columns={"준수율": "_발주"}), on=C.DIMS[1])
+check(((_j2["발주가중준수율"] - _j2["_발주"]).abs() < 1e-9).all(),
+      "  · metric_by_parts.발주가중준수율 == metric_by.준수율 (같은 재료)",
+      f"최대 차이 {(_j2['발주가중준수율'] - _j2['_발주']).abs().max():.2e}")
+check(((_j2["준수율"] - _j2["_발주"]).abs() * 100 < 0.5).all(),
+      "  · 도번 평균과 발주 가중의 차이가 0.5%p 미만 (단위가 바뀌어도 결론이 안 바뀐다)",
+      f"최대 {((_j2['준수율'] - _j2['_발주']).abs() * 100).max():.3f}%p")
+check(int(_mp["도번"].sum()) == t["orders"]["제품도번"].nunique() or int(_mp["도번"].sum()) <= t["orders"]["제품도번"].nunique(),
+      "  · 축별 도번 수 합이 전체 도번 수를 넘지 않는다", f"{int(_mp['도번'].sum())}")
+_sk = M.surrogate_key_check(t)
+check(_sk["정확도"] >= 0.99, "  · 대리 키(고객사+도번+수량+접수일) 정확도 ≥ 99% (notes/11)",
+      f"{_sk['정확도'] * 100:.2f}% · 묶인 {_sk['묶인건수']}건")
+
 print(f"\n{'모두 통과' if ok else '실패 있음'}")
 sys.exit(0 if ok else 1)

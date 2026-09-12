@@ -174,7 +174,12 @@ def build(topic: dict, evidence: dict, cards: dict,
             f = ev.get("현황")
             if f is None or not len(f):
                 continue
-            out.append(_sec(spec, _s_현황(ev), PC.funnel_svg(f), f))
+            svg = (PC.funnel_svg(f, unit="개", side="멈춤 없음",
+                                 title=f"구간별 멈춘 {C.GRAIN_SUB}가 있는 {C.GRAIN_UNIT} 수",
+                                 cap=f"막대는 그 구간에서 멈춘 {C.GRAIN_SUB}가 하나라도 있는 {C.GRAIN_UNIT} 수입니다 · "
+                                     f"{C.GRAIN_UNIT} {f.attrs.get('도번전체', 0):,}개 기준 · 오른쪽은 멈춘 {C.GRAIN_SUB}가 없는 {C.GRAIN_UNIT} 수")
+                   if f.attrs.get("그레인") == "도번" else PC.funnel_svg(f))
+            out.append(_sec(spec, _s_현황(ev), svg, f))
 
         elif key == "원인":
             g = ev.get("원인")
@@ -254,6 +259,27 @@ def _s_현황(ev: dict) -> list[str]:
     나머지 = d[d["label"] != r["label"]]
     첫 = float(f["n"].iloc[0])
 
+    # ★ 도번 단위 (2026-09-12) — 표가 `funnel_parts` 면 도번으로 말한다.
+    #   도달 도번은 11단계 전부 1,200개라 "어디까지 갔다"가 아니라 **"어느 구간에서
+    #   멈춘 발주가 있는 도번이 몇 개인가"** 가 도번 단위의 사실이다.
+    if f.attrs.get("그레인") == "도번":
+        전체 = int(f.attrs.get("도번전체", 첫)); 깨끗 = f.attrs.get("깨끗한도번")
+        lab = str(r["label"]).replace(" ", "")
+        s1 = (f'{C.GRAIN_UNIT} {전체:,}개 가운데 {int(r["drop"]):,}개({float(r["drop"]) / 전체 * 100:.0f}%)에 '
+              f'{lab}에서 멈춘 {_j(C.GRAIN_SUB, "이")} 있습니다'
+              + (f' — 어느 구간에서도 멈추지 않은 {_j(C.GRAIN_UNIT, "은")} {int(깨끗):,}개입니다.' if 깨끗 is not None else '.'))
+        s2 = ""
+        if len(나머지):
+            second = 나머지.nlargest(1, "drop").iloc[0]
+            s2 = (f'다음으로 많은 구간은 {str(second["label"]).replace(" ", "")} '
+                  f'{int(second["drop"]):,}개이고, {_j(lab, "은")} 그 '
+                  f'{float(r["drop"]) / float(second["drop"]):.1f}배입니다.')
+        s3 = (f'{lab}에서 멈춘 {_j(C.GRAIN_SUB, "은")} {int(r["멈춘발주"]):,}건인데 {C.GRAIN_UNIT}당 '
+              f'중앙 {float(r["도번당중앙"]):.0f}건 · 최대 {int(r["도번당최대"])}건이라, '
+              f'몇몇 {C.GRAIN_UNIT}의 문제가 아니라 {float(r["drop"]) / 전체 * 100:.0f}%에 '
+              f'한 건씩 퍼져 있습니다.')
+        return _cut([s1, s2, s3])
+
     s1 = (f'발주 {int(첫):,}건 가운데 {int(r["n"]):,}건이 '
           f'{str(r["label"]).replace(" ", "")}까지 갔습니다.')
     s2 = ""
@@ -284,13 +310,19 @@ def _s_원인(topic: dict, ev: dict) -> list[str]:
     최고 = ev.get("원인_최고칸", "")
     hi = g.loc[g["준수율"].idxmax()]
 
+    # ★ 도번 단위 (2026-09-12) — 준수율은 그 칸 **도번들의 평균**, 발주 수는 옆에 적는다.
+    도번 = int(big["도번"]) if "도번" in g.columns else None
     s1 = (f'{_j(dim, "으로")} 나누면 {_j(big[dim], "이")} '
-          f'{big["준수율"] * 100:.2f}%로, 기한 안에 나간 것이 '
+          + (f'{C.GRAIN_UNIT} {도번:,}개 평균 ' if 도번 else '')
+          + f'{big["준수율"] * 100:.2f}%로, 기한 안에 나간 {_j(C.GRAIN_SUB, "이")} '
           f'{int(big["분모"]):,}건 중 {int(big["준수"]):,}건입니다.')
+    저조 = int(big["저조도번"]) if "저조도번" in g.columns else None
     s2 = (f'가장 높은 {최고}({hi["준수율"] * 100:.2f}%)와 '
           f'{float(big["격차"]):.2f}%p 벌어지고, '
-          f'이 {_j(dim, "이")} 전체의 '
-          f'{big["비중"] * 100:.1f}% 를 차지합니다.')
+          f'이 {_j(dim, "이")} 전체 {C.GRAIN_UNIT}의 '
+          f'{big["비중"] * 100:.1f}%를 차지합니다'
+          + (f' — {C.LATE_PART_THRESHOLD * 100:.0f}% 밑인 {_j(C.GRAIN_UNIT, "은")} {저조:,}개입니다.'
+             if 저조 is not None else '.'))
 
     # ★ 격차 최대 칸과 크기 최대 칸이 다르면 **그 사실을 적는다.**
     #   안 적으면 "가장 낮은 칸을 왜 안 골랐나" 라는 질문이 남는다.
@@ -306,7 +338,7 @@ def _s_원인(topic: dict, ev: dict) -> list[str]:
     #   그대로 내면 "그 고객사가 문제"로 읽힌다(7주차 함정 ④). 색상은 도장에서
     #   실제로 시간이 갈리는 축이라 결재자가 손댈 수 있는 자리다.
     내역 = ev.get("색상내역") or []
-    s4 = ('색상으로 나누면 '
+    s4 = (f'색상으로 나누면 {C.GRAIN_UNIT} 평균이 '
           + " · ".join(f'{k} {r*100:.1f}%({n:,}건 늦음)' for k, n, r in 내역[:4])
           + '으로, ' + f'{_j(내역[0][0], "이")} 가장 낮습니다.') if 내역 else ""
     return _cut([s1, s2, s3, s4], 4)

@@ -58,7 +58,8 @@ def _cap(text: str) -> str:
 
 
 # ── 1) 현황 — 단계별 도달 막대 ────────────────────────────────────
-def funnel_svg(f: pd.DataFrame) -> str:
+def funnel_svg(f: pd.DataFrame, unit: str = "건", side: str = "도달",
+               title: str = "단계별 빠진 건수", cap: str | None = None) -> str:
     """단계별 **이탈** 막대. **병목 구간 하나만** 강조색.
 
     증명하는 문장 — *"여기서 가장 많이 빠진다."*
@@ -96,7 +97,7 @@ def funnel_svg(f: pd.DataFrame) -> str:
             f'fill="{_INK}" font-weight="{700 if hit else 400}">'
             f'{int(drop):,}</text>'
             f'<text x="{w - 6}" y="{y + 15}" text-anchor="end" '
-            f'font-size="9.5" fill="{_MUTED}">도달 {int(r["n"]):,}</text>')
+            f'font-size="9.5" fill="{_MUTED}">{side} {int(r["n"]):,}</text>')
         if hit:
             parts.append(
                 f'<text x="{left + bw + 62:.1f}" y="{y + 15}" font-size="10" '
@@ -106,14 +107,14 @@ def funnel_svg(f: pd.DataFrame) -> str:
         f'<line x1="{left}" y1="{h - 20}" x2="{left + bar_w}" y2="{h - 20}" '
         f'stroke="{_LINE}"/>'
         f'<text x="{left}" y="{h - 7}" font-size="9.5" fill="{_MUTED}">'
-        f'0건 빠짐</text>'
+        f'0{unit}</text>'
         f'<text x="{left + bar_w}" y="{h - 7}" text-anchor="end" '
-        f'font-size="9.5" fill="{_MUTED}">{int(top):,}건</text>')
+        f'font-size="9.5" fill="{_MUTED}">{int(top):,}{unit}</text>')
 
-    return (_svg(w, h, "".join(parts), "단계별 빠진 건수")
+    return (_svg(w, h, "".join(parts), title)
             # ⚠️ caption 은 그대로 찍히는 자리라 마크다운이 해석되지 않는다.
             #   `**강조**` 를 쓰면 별표가 그대로 보인다 — 말로 강조한다.
-            + _cap("막대는 그 단계에서 빠진 건수입니다. 도달 수가 아닙니다 · "
+            + _cap(cap or "막대는 그 단계에서 빠진 건수입니다. 도달 수가 아닙니다 · "
                    "발주 한 건을 하나로 셌습니다. 같은 단계를 두 번 밟아도 한 번만 셉니다"))
 
 
@@ -175,7 +176,9 @@ def gap_svg(g: pd.DataFrame, dim: str, value: str = "준수율") -> str:
             f'(값이 좁은 구간에 몰려 있어 잘랐습니다)</text>')
 
     return (_svg(w, h, "".join(parts), f"{dim}별 값 비교")
-            + _cap(f"{dim} 별 · 기한이 이미 지난 {int(g['분모'].sum()):,}건 기준"))
+            + _cap(f"{dim} 별 · " + (f"막대는 {C.GRAIN_UNIT} 준수율의 평균 · {C.GRAIN_UNIT} {int(g['도번'].sum()):,}개 · "
+                                    if "도번" in g.columns else "")
+                   + f"기한이 이미 지난 발주 {int(g['분모'].sum()):,}건 기준"))
 
 
 # ── 3) 추세 — 꺾은선 ──────────────────────────────────────────────
