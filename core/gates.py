@@ -107,10 +107,16 @@ def load_all() -> list[dict]:
 #
 # ★ 자동 저장은 하지 않는다. 교안 프롬프트 10 이 "저장을 누를 때만 저장된다"
 #   고 했고, 폼의 목적이 그것이다. **누른 것만 남긴다.**
-def save_human(human: dict) -> Path:
-    """사람이 쓴 장을 파일로. 저장을 누를 때마다 덮어쓴다."""
+def save_human(human: dict, kind: str = "human") -> Path:
+    """사람이 쓴 장을 파일로. 저장을 누를 때마다 덮어쓴다.
+
+    `kind` 는 어느 문서의 것인가 — 리포트는 `"human"`, 제안서는 `"proposal"`.
+    **파일을 나눈다.** 한 파일에 섞으면 절 이름이 겹치는 날 한쪽이 다른 쪽을
+    덮는데, 덮인 쪽은 사람이 쓴 글이라 되살릴 방법이 없다.
+    기본값을 둬서 **기존 호출은 그대로** 돈다 (2026-09-09 추가).
+    """
     C.DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
-    p = C.DRAFTS_DIR / "human.json"
+    p = C.DRAFTS_DIR / f"{kind}.json"
     p.write_text(json.dumps(
         {"saved_at": datetime.now().isoformat(timespec="seconds"),
          "dataset": C.DATASET, "sections": human},
@@ -118,9 +124,9 @@ def save_human(human: dict) -> Path:
     return p
 
 
-def load_human() -> tuple[dict, str | None]:
+def load_human(kind: str = "human") -> tuple[dict, str | None]:
     """저장해 둔 것을 돌려준다. (본문, 저장시각) · 없으면 ({}, None)."""
-    p = C.DRAFTS_DIR / "human.json"
+    p = C.DRAFTS_DIR / f"{kind}.json"
     if not p.exists():
         return {}, None
     try:

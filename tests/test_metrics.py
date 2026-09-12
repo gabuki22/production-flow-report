@@ -346,11 +346,42 @@ check(not any("now" in str(v).lower() for v in [C.TODAY]),
 #   같은 입력에 같은 결과가 나와야 보고에 쓸 수 있다.
 #   손으로 확인하면 다음 사람이 또 확인해야 하므로 검사로 박는다.
 import re as _re                                          # noqa: E402
-NOW = r"datetime\.now|Timestamp\.now|date\.today|time\.time"
+import tokenize as _tk, io as _io                         # noqa: E402
+# ⚠️ 토큰을 걷어 이으면 `datetime . now` 처럼 점 둘레에 공백이 생긴다.
+#    공백을 허용하지 않으면 **검사가 아무것도 못 잡는다**
+#    (2026-09-10 자가검증에서 드러났다).
+NOW = (r"datetime\s*\.\s*now|Timestamp\s*\.\s*now|"
+       r"date\s*\.\s*today|time\s*\.\s*time")
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _code_only(src: str) -> str:
+    """주석과 문자열을 걷어낸 **실행되는 코드만** 돌려준다.
+
+    ⚠️ 소스를 통째로 훑으면 *"`datetime.now()` 를 쓰지 않는다"* 라고 적은
+      **주석이 검사에 걸린다** — 규칙을 설명하는 글이 규칙을 어긴 꼴이다.
+      2026-09-10 에 실제로 걸렸고, 그때 고를 수 있는 길은 둘이었다:
+      주석에서 그 말을 지우거나, 검사가 코드만 보게 하거나.
+      **주석을 지우면 왜 안 되는지가 사라지므로** 검사를 고쳤다.
+    """
+    out = []
+    for tok in _tk.generate_tokens(_io.StringIO(src).readline):
+        if tok.type in (_tk.COMMENT, _tk.STRING):
+            continue
+        out.append(tok.string)
+    return " ".join(out)
+
+
 for mod in ["core/metrics.py", "core/validate.py", "core/load.py"]:
-    hits = _re.findall(NOW, (ROOT / mod).read_text(encoding="utf-8"))
+    hits = _re.findall(NOW, _code_only((ROOT / mod).read_text(encoding="utf-8")))
     check(not hits, f"{mod} — 현재 시각을 쓰지 않는다", f"{len(hits)}곳")
+
+# ★ **검사기를 꺼 본다** (규칙 12) — 진짜 호출을 심으면 잡히는가.
+#   주석만 거르고 코드도 함께 걸러 버리면 이 검사는 영원히 통과한다.
+check(bool(_re.findall(NOW, _code_only("x = datetime.now()  # 주석"))),
+      "  · 코드에 심으면 잡힌다 (자가검증)")
+check(not _re.findall(NOW, _code_only("# datetime.now() 를 쓰지 않는다")),
+      "  · 주석에 있으면 안 잡힌다 (자가검증)")
 
 # sections.py 는 **한 곳만** 허용한다 — 이메일 초안 footer 의 "생성 시각"이다.
 # 표시용이라 숫자에 영향을 주지 않는다. 늘어나면 여기서 걸린다.
@@ -515,6 +546,120 @@ check(_b_unshipped > 0.9, "  · ② 는 출하도 안 됐다",
 _dash = (ROOT / "pages" / "2_대시보드.py").read_text(encoding="utf-8")
 check("한 번에 갔는데도 늦었다" not in _dash,
       "  · 화면에 옛 설명('한 번에 갔는데도 늦었다')이 남아 있지 않다")
+
+
+# ── 8-8. 표본 흔들림 shake() (2026-09-08 Day1 프롬프트 4) ──────────
+# **한 건이 바뀌면 값이 얼마나 움직이는가.** 그 폭이 칸 사이 격차보다 크면
+# 순위가 한 건으로 뒤집히므로 그 축으로는 결론을 낼 수 없다.
+#
+# ⚠️ 우리 실데이터에서는 이 규칙이 **한 번도 걸리지 않는다**(최소 칸 분모 2,502).
+#    그래서 실데이터만으로 검사하면 **규칙이 죽어 있어도 전부 PASS 한다.**
+#    일부러 깨진 표본을 넣고, 규칙을 꺼서 미검출까지 확인한다.
+print("\n8-8. 표본 흔들림")
+
+_g = pd.DataFrame({"축": ["a", "b"], "분모": [1000, 250],
+                   "준수": [900, 200], "준수율": [0.90, 0.80]})
+_s = M.shake(_g, "분모", "준수율")
+check(near(_s["흔들림"].iloc[0], 0.1, 1e-9), "  · 손계산 1/1000 = 0.100%p",
+      f"{_s['흔들림'].iloc[0]:.4f}")
+check(near(_s["격차"].iloc[0], 10.0, 1e-9), "  · 격차 90−80 = 10.00%p")
+check(bool(_s["결론가능"].iloc[0]), "  · 격차 > 흔들림 → 결론 가능")
+
+# ★ 일부러 걸어 본다 — 안 잡히면 이 규칙은 장식이다
+_bad = pd.DataFrame({"축": ["a", "b"], "분모": [40, 35],
+                     "준수": [20, 17], "준수율": [0.500, 0.4857]})
+_sb = M.shake(_bad, "분모", "준수율")
+check(not bool(_sb["결론가능"].iloc[0]),
+      "  · ★ 흔들림 > 격차를 잡는다 (일부러 걸어 봄)",
+      f"격차 {_sb['격차'].iloc[0]:.2f} < 흔들림 {_sb['흔들림'].max():.2f}")
+check("결론을 낼 수 없다" in M.shake_verdict(_sb, "축")["판정"],
+      "  · 판정 문장이 사람에게 그렇게 말한다")
+
+# ★ 규칙을 꺼 본다 — 끄면 미검출이어야 실제로 작동 중이었던 것이다
+_tiny = pd.DataFrame({"축": ["a", "b"], "분모": [3, 500],
+                      "준수": [1, 450], "준수율": [0.3333, 0.90]})
+check(bool(M.shake(_tiny, "분모", "준수율")["건수로쓸것"].iloc[0]),
+      f"  · 분모 3 → 건수로 쓴다 (기준 {C.MIN_COUNT_BASIS})")
+_saved = C.MIN_COUNT_BASIS
+C.MIN_COUNT_BASIS = 0
+check(not M.shake(_tiny, "분모", "준수율")["건수로쓸것"].any(),
+      "  · ★ 기준을 0으로 끄면 미검출 (자가검증)")
+C.MIN_COUNT_BASIS = _saved
+
+# 두 분해 함수 양쪽에 걸리는가 — 분모 컬럼 이름이 다르다(도달 / 분모)
+_fb = M.shake(M.funnel_by(t, C.DIMS[0], "검사", "출하"), "도달", "전환율")
+_mb = M.shake(M.metric_by(t, C.DIMS[0]), "분모", "준수율")
+check(M.denom_of(_fb) == "도달" and M.denom_of(_mb) == "분모",
+      "  · funnel_by·metric_by 양쪽에 걸린다")
+check(bool(_mb["결론가능"].iloc[0]),
+      "  · 실데이터 주지표 분해는 결론 가능",
+      f"격차 {_mb['격차'].iloc[0]:.2f}%p > 흔들림 {_mb['흔들림'].max():.3f}%p")
+
+
+# ── 8-9. 발견.md 가 앱과 같은 값을 말하는가 (2026-09-08 Day1) ──────
+# 발견.md 는 제안서의 근거가 된다. **거기 적힌 값이 앱과 갈리면 제안 전체가 흔들린다** —
+# 교안: *"제안서에서 숫자 하나가 틀리면 '다른 것도 확인해 봐야겠네요' 가 나오고 거기서 끝난다."*
+#
+# 8-6 과 같은 방법으로 문서에서 **글자로 찾는다.** 파싱하지 않는다.
+#
+# ⚠️ 검사 범위를 「발견」 절로 **자른다.** 내일 원인이 붙고 모레 제안이 붙는데,
+#    문서 전체에 인과 표현 검사를 걸면 그때 제안 절이 통째로 걸린다.
+#    (9/4 에 유출 검사를 문서 전체에 걸었다가 헛짚은 것과 같은 실수)
+print("\n8-9. 발견.md ↔ 앱")
+
+_F = ROOT / "발견.md"
+if not _F.exists():
+    check(False, "  · 발견.md 가 있다")
+else:
+    _doc = _F.read_text(encoding="utf-8")
+    _head = _doc.split("## 못 쓰는 숫자")[0]      # 발견 절만
+
+    def _has(val, what, where=None):
+        check(str(val) in (where if where is not None else _doc),
+              f"  · {what}", str(val))
+
+    _k = M.kpis(t)
+    for _n in ("납기 준수율", "불량률", "긴급품 비율", "지연 출하율"):
+        _fmt = ".2f"
+        _has(f"{_k[_n]['value']:{_fmt}}%", f"지표 {_n}")
+
+    # 두 분모가 둘 다 적혀 있는가 — 하나만 적으면 어느 쪽인지 모른다
+    _g = M.metric_by(t, C.DIMS[0])
+    _has(f"{int(_g['분모'].sum()):,}", "분해 분모(완주&납기도래)")
+    _has(f"{int(M.order_facts(t['orders'], t['order_events'])['납기도래'].sum()):,}",
+         "카드 분모(납기도래)")
+
+    # 발견 절의 칸 값 — 격차·비중·흔들림·크기가 전부 실측과 같은가
+    for _dim, _cell in (("차종", "V6"), ("색상", "블루"), ("고객사", "D사")):
+        _gg = M.shake(M.metric_by(t, _dim), "분모", "준수율")
+        _r = _gg[_gg[_dim] == _cell].iloc[0]
+        _gap = (_gg["준수율"].max() - _r["준수율"]) * 100
+        _has(f"{int(_r['준수']):,} / {int(_r['분모']):,}", f"{_cell} 분자/분모", _head)
+        _has(f"{_gap:.2f}%p", f"{_cell} 격차", _head)
+        _has(f"{_r['비중']*100:.2f}%", f"{_cell} 비중", _head)
+        _has(f"{_gap * _r['비중']:.3f}", f"{_cell} 격차x비중", _head)
+
+    # ★ 발견 절에 원인·제안이 섞이지 않았는가 (오늘 것이 아니다)
+    _BAN = ["때문에", "덕분에", "효과로", "입증되었", "증명되었", "확실히",
+            "원인이다", "유발했다"]
+    _hit = [w for w in _BAN if w in _head]
+    check(not _hit, "  · ★ 발견 절에 인과 표현이 없다",
+          "걸림: " + " · ".join(_hit) if _hit else "")
+
+    # ★ 자가검증 — 인과 표현을 심으면 정말 걸리는가
+    check(any(w in (_head + " 이것 때문에 늦었다") for w in _BAN),
+          "  · ★ 심어 보면 걸린다 (자가검증)")
+
+    # 「못 쓰는 숫자」 절이 비어 있지 않은가 — 교안: 비었으면 실습 D를 안 한 것
+    _unusable = _doc.split("## 못 쓰는 숫자")[-1].split("## 확인한 정의")[0]
+    check(_unusable.count("|") > 8, "  · 「못 쓰는 숫자」 절이 비어 있지 않다",
+          f"표 칸 {_unusable.count('|')}")
+
+    # 감춘 실험의 효과 수치가 발견으로 새지 않았는가
+    _hidden = [r for r in M.experiment_results(t) if r.get("lift") is None]
+    check(len(_hidden) >= 1 and all(str(r["id"]) in _doc for r in _hidden),
+          "  · 감춘 실험이 「못 쓰는 숫자」에 이름으로 있다",
+          " · ".join(r["id"] for r in _hidden))
 
 print(f"\n{'모두 통과' if ok else '실패 있음'}")
 sys.exit(0 if ok else 1)

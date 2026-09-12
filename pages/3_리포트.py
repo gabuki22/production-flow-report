@@ -43,6 +43,7 @@ if st.session_state.get("limit_rows"):
 #   config.DIMS 의 첫 번째로 고정한다. 매번 다른 축이 실리면 지난 문서와 비교가 안 된다.
 DIM = C.DIMS[0]
 
+
 st.markdown('<div style="font-size:24px;font-weight:800;margin-bottom:16px">'
             '리포트</div>', unsafe_allow_html=True)
 

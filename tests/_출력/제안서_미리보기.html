@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제안서 — 성우산업 생산 흐름</title>
+<style>
+/* 디자인 시스템 — 화면/DESIGN.md §3. 상태 색 넷은 의미가 고정이라 바꾸지 않는다. */
+:root{
+  --ok:#10b981; --warn:#f59e0b; --block:#f43f5e; --none:#64748b;
+  --primary:#4f46e5; --ink:#0f172a; --muted:#64748b;
+  --line:#e2e8f0; --bg:#f8fafc; --surface:#ffffff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:Pretendard,-apple-system,'Malgun Gothic',sans-serif;
+  background:var(--bg); color:var(--ink); font-size:14px; line-height:1.75;
+}
+.page{max-width:900px; margin:0 auto; padding:40px 36px 80px}
+.num{font-variant-numeric:tabular-nums; font-feature-settings:"tnum"}
+
+.cover{border-bottom:3px solid var(--primary); padding-bottom:26px; margin-bottom:32px}
+.cover .kicker{font-size:12px; font-weight:700; color:var(--primary); letter-spacing:.08em}
+.cover h1{font-size:30px; font-weight:800; margin:10px 0 6px; line-height:1.3}
+.cover .sub{font-size:14px; color:var(--muted)}
+.cover .meta{display:flex; gap:22px; flex-wrap:wrap; margin-top:18px; font-size:12px; color:var(--muted)}
+.cover .meta b{color:var(--ink); font-weight:600}
+
+.summary{background:var(--surface); border:1px solid var(--line);
+  border-top:4px solid var(--primary); border-radius:14px; padding:26px 28px; margin-bottom:34px}
+.summary h2{font-size:13px; font-weight:700; color:var(--primary); letter-spacing:.06em; margin:0 0 16px}
+.srow{display:flex; gap:16px; padding:11px 0; border-top:1px solid var(--line)}
+.srow:first-of-type{border-top:none; padding-top:0}
+.srow .k{flex:0 0 74px; font-size:11px; font-weight:700; color:var(--muted); letter-spacing:.04em; padding-top:3px}
+.srow .v{flex:1}
+.srow .v .lead{font-size:15px; font-weight:600; line-height:1.6}
+.plist{margin:0; padding:0; list-style:none}
+.plist li{display:flex; gap:9px; align-items:baseline; padding:3px 0}
+.plist .n{flex:0 0 18px; font-weight:700; color:var(--muted)}
+
+h2.sec{font-size:20px; font-weight:800; margin:44px 0 4px; padding-top:8px}
+h2.sec .no{color:var(--primary); margin-right:9px}
+.sec-lead{color:var(--muted); font-size:13px; margin:0 0 20px}
+h3{font-size:15px; font-weight:700; margin:26px 0 10px}
+
+table{border-collapse:collapse; width:100%; font-size:13px; margin:12px 0 16px; page-break-inside:avoid}
+th,td{border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top}
+th{background:#f8fafc; font-weight:700; font-size:12px; color:#334155}
+td.r,th.r{text-align:right}
+tr.hl td{background:rgba(244,63,94,.05)}
+tr.dim td{color:var(--muted)}
+
+.badge{display:inline-flex; align-items:center; gap:5px; font-size:11px;
+  font-weight:700; padding:3px 10px; border-radius:999px; white-space:nowrap}
+.b-ok{background:rgba(16,185,129,.12); color:var(--ok)}
+.b-warn{background:rgba(245,158,11,.14); color:#b45309}
+.b-block{background:rgba(244,63,94,.12); color:var(--block)}
+.b-none{background:rgba(100,116,139,.12); color:var(--none)}
+
+.prop{background:var(--surface); border:1px solid var(--line); border-left:5px solid var(--line);
+  border-radius:12px; padding:20px 24px; margin:16px 0; page-break-inside:avoid}
+.prop.stop{border-left-color:var(--block); background:#fff8f9}
+.prop.redo{border-left-color:var(--warn); background:#fffdf7}
+.prop.go{border-left-color:var(--ok)}
+.prop .cls{font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--muted)}
+.prop h4{font-size:17px; font-weight:700; margin:4px 0 14px}
+.prop dl{display:grid; grid-template-columns:64px 1fr; gap:7px 14px; margin:0; font-size:13px}
+.prop dt{font-weight:700; color:var(--muted); font-size:12px; padding-top:1px}
+.prop dd{margin:0}
+
+.lab{font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:4px; margin-right:6px; letter-spacing:.03em}
+.l-obs{background:rgba(16,185,129,.13); color:#047857}
+.l-asm{background:rgba(245,158,11,.16); color:#b45309}
+.l-est{background:rgba(100,116,139,.13); color:#475569}
+.unknown{color:var(--warn); font-weight:700}
+
+.callout{border-left:3px solid var(--warn); background:rgba(245,158,11,.07);
+  padding:12px 16px; border-radius:0 8px 8px 0; font-size:13px; color:#78350f;
+  margin:14px 0; page-break-inside:avoid}
+.callout.info{border-left-color:var(--primary); background:rgba(79,70,229,.05); color:#3730a3}
+.callout.stop{border-left-color:var(--block); background:rgba(244,63,94,.06); color:#9f1239}
+
+/* ── 막대 차트 — width 퍼센트만 바꾸면 된다 ── */
+figure{margin:18px 0; page-break-inside:avoid}
+figcaption{font-size:11.5px; color:var(--muted); margin-top:7px}
+.chart{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px 22px}
+.row{display:flex; align-items:center; gap:12px; margin:9px 0}
+.row .lb{flex:0 0 150px; text-align:right; font-size:12.5px; color:#334155}
+.row .track{flex:1; background:#f1f5f9; border-radius:4px; height:22px; position:relative}
+.row .bar{height:22px; border-radius:4px; background:var(--primary); opacity:.85}
+.row .bar.hl{background:var(--block); opacity:1}
+.row .bar.mid{background:var(--warn); opacity:1}
+.row .vv{flex:0 0 200px; font-size:12.5px; font-weight:700;
+  font-variant-numeric:tabular-nums}
+.row .vv small{font-weight:400; color:var(--muted); margin-left:8px}
+
+.appendix{margin-top:52px; padding-top:26px; border-top:3px double var(--line)}
+.appendix h2.sec{font-size:17px}
+.small{font-size:12px; color:var(--muted)}
+
+/* 채우기 전 자리 — 다 채우면 이 스타일은 안 보인다 */
+.todo{background:rgba(79,70,229,.06); color:#3730a3; border-radius:4px; padding:0 4px}
+
+@page{size:A4; margin:18mm 16mm 20mm 16mm}
+@media print{
+  body{background:#fff; font-size:10.5pt}
+  .page{max-width:none; padding:0}
+  h2.sec{page-break-after:avoid}
+  .summary,.prop,figure,table,.callout,.chart{page-break-inside:avoid}
+  .appendix{page-break-before:always}
+  .todo{background:none}
+}
+</style>
+</head>
+<body>
+<div class="page">
+<div class="cover"><div class="kicker">성과 개선 제안</div><h1>발주가 어디서 막히고 얼마나 밀리는가</h1><div class="sub">생산 흐름 리포트 · 제안 6건</div><div class="meta"><span>데이터셋 <b>성우산업 생산 흐름</b></span><span>기간 <b class="num">2025-09-01 ~ 2026-08-29</b></span><span>작성 <b class="num">2026-09-09</b></span><span>검증 <b><span class="badge b-ok">● 차단 0</span></b></span></div></div><div class="summary"><h2>한 장 요약</h2><div class="srow"><div class="k">발견</div><div class="v"><div class="lead">차종 V6 의 납기 준수율이 <b><span class="num">88.41%</span></b> (<span class="num">8,419</span> / <span class="num">9,523</span>) 로 축 최고 칸 V1 <b><span class="num">91.53%</span></b> (<span class="num">21,825</span> / <span class="num">23,845</span>) 보다 <b><span class="num">3.12%p</span></b> 낮다. 비중 <b><span class="num">12.80%</span></b> (납기 도래 완주 코호트 74,419건 중) · 크기 <b>격차 × 비중 = 39.9 · 건수 환산 297건</b> — <b>전 축 통틀어 1위</b>. 한 건 흔들림 <span class="num">0.011%p</span> 로 격차의 1/284 라 표본 탓이 아니다</div></div></div><div class="srow"><div class="k">제안</div><div class="v"><ul class="plist"><li><span class="n">①</span><span><span class="badge b-block">✕ 하지 말 것</span> 퍼널 전환율로 축을 쪼개는 것을 그만둔다 · 격차가 가장 큰 칸부터 손대는 것을 그만둔다 · &quot;완제품을 더 빨리 내보내자&quot;를 그만둔다</span></li><li><span class="n">②</span><span><span class="badge b-warn">▲ 다시 할 것</span> 색상 묶음 순서 실험을 배정을 고쳐 다시 돌린다 · 지시서 조기 발행 실험을 표본·기간을 채워 다시 돌린다</span></li><li><span class="n">③</span><span><span class="badge b-ok">● 할 것</span> 차종 V6 의 납기 준수율 격차를 좁힌다</span></li></ul></div></div><div class="srow"><div class="k">불확실</div><div class="v">&quot;차종 V6 의 납기 준수율 격차를 좁힌다&quot; — 비용 · 되돌림 미확인</div></div><div class="srow"><div class="k">근거</div><div class="v"><span class="small">카드 최종 갱신 2026-09-09 · 카드 6장 · 상세는 부록</span></div></div></div><h2 class="sec"><span class="no">3</span>무엇을 하자고 제안하는가</h2><p class="sec-lead">멈추는 것부터 적는다. 비용이 0이고 근거가 관측이기 때문이다.</p><div class="prop stop"><div class="cls">① 하지 말 것</div><h4>퍼널 전환율로 축을 쪼개는 것을 그만둔다</h4><dl><dt>근거</dt><dd><span class="lab l-obs">관측</span>병목 구간(검사→출하)을 세 축으로 쪼갠 격차가 <b>고객사 <span class="num">0.16%p</span></b>(98.41~98.57) · <b>차종 <span class="num">0.29%p</span></b>(98.28~98.57) · <b>색상 <span class="num">0.16%p</span></b>(98.43~98.59) 다. 같은 축·같은 대상을 <b>납기 준수율</b>로 쪼개면 <b>4.18 / 3.59 / <span class="num">2.04%p</span></b> — <b>14배</b>. 최소 칸 분모 2,588건이라 표본 탓이 아니다. 비중: 세 축이 각각 대상 전체를 덮는다(칸 합 <span class="num">100%</span>)</dd><dt>비용</dt><dd><span class="unknown">미확인</span> — 그만두는 데 드는 비용은 없다. 다만 이미 만든 퍼널 분해 화면을 <b>지울지 남길지</b>는 사람이 정한다</dd><dt>효과</dt><dd><span class="lab l-obs">관측</span><b>실측</b> — 이 축들로는 최대 0.29%p까지만 갈린다. 더 쪼개도 결론이 안 나온다</dd><dt>되돌림</dt><dd><span class="lab l-obs">관측</span>가능 — 언제든 다시 쪼갤 수 있다. 계산 함수(`funnel_by`)는 그대로 둔다</dd></dl></div><div class="prop stop"><div class="cls">① 하지 말 것</div><h4>격차가 가장 큰 칸부터 손대는 것을 그만둔다</h4><dl><dt>근거</dt><dd><span class="lab l-obs">관측</span>고객사 D사가 <b><span class="num">87.41%</span></b> (<span class="num">2,187</span> / <span class="num">2,502</span>) 로 세 축 통틀어 격차 최대(<b><span class="num">4.18%p</span></b> · vs C사 <span class="num">91.59%</span> <span class="num">8,232</span>/<span class="num">8,988</span>) 다. 그런데 비중이 <b><span class="num">3.36%</span></b> (74,419건 중) 라 <b>전부 고쳐도 105건</b>이다. 크기 1위인 차종 V6 는 격차가 더 작은데(<span class="num">3.12%p</span>) 비중이 <b><span class="num">12.80%</span></b> 라 <b>297건</b> — <b>2.8배</b>. 반대쪽도 같다: E사는 비중 <span class="num">38.16%</span> 로 최대인데 격차 <span class="num">0.88%p</span> 라 250건</dd><dt>비용</dt><dd><span class="unknown">미확인</span> — 순서를 바꾸는 것 자체의 비용은 없다. <b>이미 D사 쪽에 들인 노력이 있다면</b> 그것이 매몰비용인지는 사람이 안다</dd><dt>효과</dt><dd><span class="lab l-obs">관측</span><b>실측</b> — 같은 노력을 크기 1위에 쓰면 105건 → 297건. 차이 <b>192건</b></dd><dt>되돌림</dt><dd><span class="lab l-obs">관측</span>가능</dd></dl></div><div class="prop stop"><div class="cls">① 하지 말 것</div><h4>&quot;완제품을 더 빨리 내보내자&quot;를 그만둔다</h4><dl><dt>근거</dt><dd><span class="lab l-obs">관측</span>검사→출하 체류가 <b>19일</b>로 전체 36일의 <b><span class="num">52.8%</span></b> 라 가장 길다(다음은 사출→지그삽입 3일). 그러나 출하 <b>76,440건 중 <span class="num">86.0%</span>(65,766건)가 납기보다 일찍</b> 나간다 — 중앙 <b>+4일</b>, 일찍 나간 건의 중앙 여유 <b>5일</b>. 당일 <span class="num">9.0%</span>(6,866건) · 늦은 건 <span class="num">5.0%</span>(3,808건). <b>19일은 병목이 아니라 납기 대기</b>다</dd><dt>비용</dt><dd><span class="unknown">미확인</span> — <b>더 일찍 내보내면 완제품 재고가 는다.</b> 창고 비용과 고객 입고 일정 제약을 사람이 안다</dd><dt>효과</dt><dd><span class="lab l-obs">관측</span><b>실측</b> — 이미 86%가 일찍 나가므로 더 앞당겨도 납기 준수율은 거의 안 오른다. 남은 <span class="num">5.0%</span>(3,808건)는 *일찍 못 내보내서*가 아니라 *늦어서* 못 지킨 것이다</dd><dt>되돌림</dt><dd><span class="lab l-obs">관측</span>가능</dd></dl></div><div class="prop redo"><div class="cls">② 다시 할 것</div><h4>색상 묶음 순서 실험을 배정을 고쳐 다시 돌린다</h4><dl><dt>근거</dt><dd><span class="lab l-obs">관측</span>색상 블루의 납기 준수율이 <b><span class="num">89.32%</span></b> (<span class="num">11,094</span> / <span class="num">12,420</span>) 로 실버 <b><span class="num">91.37%</span></b> (<span class="num">15,164</span> / <span class="num">16,597</span>) 보다 <b><span class="num">2.04%p</span></b> 낮다. 비중 <b><span class="num">16.69%</span></b> · 크기 환산 <b>254건</b>(전 축 2위). 손을 쓸 방법으로 설계된 EXP-002(색상 묶음 순서 조정)는 배정이 <b><span class="num">5,201</span> : <span class="num">3,199</span> = 61.9:38.1</b> 로 깨져(p=8.9e-106) <b>무효</b> 판정이다 — 표본 8,400건·55일은 충분한데 <b>배정만 깨졌다</b></dd><dt>비용</dt><dd><span class="unknown">미확인</span> — 실험을 다시 돌리는 데 드는 기간·공수를 사람이 안다</dd><dt>효과</dt><dd><span class="unknown">미확인</span><b> — 배정이 깨져 앱이 효과 수치를 </b>아예 만들지 않는다**. 지금 데이터로는 채울 방법이 없다</dd><dt>되돌림</dt><dd><span class="lab l-obs">관측</span>가능 — 실험이라 원래 되돌릴 수 있게 설계돼 있다</dd></dl></div><div class="prop redo"><div class="cls">② 다시 할 것</div><h4>지시서 조기 발행 실험을 표본·기간을 채워 다시 돌린다</h4><dl><dt>근거</dt><dd><span class="lab l-obs">관측</span>EXP-003(지시서 조기 발행)이 <b>표본 64건</b>(최소 100) · <b>기간 11일</b>(최소 28) 로 <b>무효</b> 판정이다. 배정은 25 : 39 로 정상(p=0.080) — <b>깨진 것은 배정이 아니라 규모</b>다. 남은 것은 표본 36건·기간 17일</dd><dt>비용</dt><dd><span class="unknown">미확인</span> — 17일을 더 도는 동안의 운영 부담을 사람이 안다</dd><dt>효과</dt><dd><span class="unknown">미확인</span>** — 못 믿을 조건에 걸려 앱이 지표를 계산하지 않는다(계산해 놓고 감춘 것이 아니다)</dd><dt>되돌림</dt><dd><span class="lab l-obs">관측</span>가능</dd></dl></div><div class="prop go"><div class="cls">③ 할 것</div><h4>차종 V6 의 납기 준수율 격차를 좁힌다</h4><dl><dt>근거</dt><dd><span class="lab l-obs">관측</span>차종 V6 의 납기 준수율이 <b><span class="num">88.41%</span></b> (<span class="num">8,419</span> / <span class="num">9,523</span>) 로 축 최고 칸 V1 <b><span class="num">91.53%</span></b> (<span class="num">21,825</span> / <span class="num">23,845</span>) 보다 <b><span class="num">3.12%p</span></b> 낮다. 비중 <b><span class="num">12.80%</span></b> (납기 도래 완주 코호트 74,419건 중) · 크기 <b>격차 × 비중 = 39.9 · 건수 환산 297건</b> — <b>전 축 통틀어 1위</b>. 한 건 흔들림 <span class="num">0.011%p</span> 로 격차의 1/284 라 표본 탓이 아니다</dd><dt>비용</dt><dd><span class="unknown">미확인</span> — V6 에 무엇을 해야 좁혀지는지가 데이터 밖이다. 착수 지연·자재 결품·계획 변경 이력이 우리 데이터에 없다</dd><dt>효과</dt><dd><span class="lab l-obs">관측</span><b>실측</b> 격차 <span class="num">3.12%p</span> · 297건 / <b>추정</b> 격차의 절반을 좁히면 <b>149건</b> — 가정: *V1 수준의 절반까지만 따라간다*. 전부 따라가면 297건이나 <b>최고 칸까지 간다는 가정은 근거가 없다</b></dd><dt>되돌림</dt><dd><span class="unknown">미확인</span> — 무엇을 할지 안 정해서 되돌릴 수 있는지도 모른다. <b>정하고 나서 채운다</b></dd></dl></div><h2 class="sec"><span class="no">4</span>이 제안이 틀린다면</h2><p>축별 격차가 심은 값이라 실데이터에서 V6가 낮지 않을 수 있다.</p><h2 class="sec"><span class="no">5</span>적용</h2><p class="sec-lead">이번 분석에서 쓴 방법 중 앞으로도 쓸 것. 판단기준.md 에서 뽑았다 — 새로 만들지 않았다.</p><p><span class="todo">[ 아직 쓰지 않았습니다 — 사람이 쓰는 절 ]</span></p><table><thead><tr><th>판단 기준</th><th>언제 정했나</th></tr></thead><tbody><tr><td>표본 검사를 만들되 안 걸릴 것을 알고 만들었다</td><td class="small">2026-09-08 (Day1 진도)</td></tr><tr><td>감춘 실험의 이름이 겹치는 발견을 남겼다</td><td class="small">2026-09-08 (Day1 진도)</td></tr><tr><td>퍼널 전환율로 낸 축 분해를 버렸다</td><td class="small">2026-09-08 (Day1 진도)</td></tr><tr><td>격차가 큰 칸을 1순위로 삼지 않았다</td><td class="small">2026-09-08 (Day1 진도)</td></tr><tr><td>크기를 격차 × 비중으로 쟀다</td><td class="small">2026-09-08 (Day1 진도)</td></tr><tr><td>분해 축을 체류일수·구간 분해로 정하고, 낡은 수치 4건은 고친다</td><td class="small">2026-09-05~06 (배포)</td></tr><tr><td>골격에서 온 제목을 우리 것으로 갈았다</td><td class="small">2026-09-05~06 (배포)</td></tr><tr><td>교안이 명시한 형태는 내 취향으로 바꾸지 않는다</td><td class="small">2026-09-05~06 (배포)</td></tr><tr><td>사람이 쓰는 칸은 번호를 눌러 하나씩</td><td class="small">2026-09-05~06 (배포)</td></tr><tr><td>통과 버튼을 바로 누를 수 있게 한다</td><td class="small">2026-09-05~06 (배포)</td></tr><tr><td>회사 이름과 구술 인용은 일부러 남긴다</td><td class="small">2026-09-05~06 (배포)</td></tr><tr><td>설명하려고 사람 이름을 넣지 않는다</td><td class="small">2026-09-05~06 (배포)</td></tr></tbody></table><div class="appendix"><h2 class="sec">부록 A · 근거 상세</h2><p class="small">카드 파일 최종 갱신: 2026-09-09
+근거는 앱에서 직접 조회한 값이다. 리포트 문장을 옮겨 적지 않았다.
+
+1. &quot;퍼널 전환율로 축을 쪼개는 것을 그만둔다&quot;  [하지 말 것]
+   병목 구간(검사→출하)을 세 축으로 쪼갠 격차가 <b>고객사 <span class="num">0.16%p</span></b>(98.41~98.57) · <b>차종 <span class="num">0.29%p</span></b>(98.28~98.57) · <b>색상 <span class="num">0.16%p</span></b>(98.43~98.59) 다. 같은 축·같은 대상을 <b>납기 준수율</b>로 쪼개면 <b>4.18 / 3.59 / <span class="num">2.04%p</span></b> — <b>14배</b>. 최소 칸 분모 2,588건이라 표본 탓이 아니다. 비중: 세 축이 각각 대상 전체를 덮는다(칸 합 <span class="num">100%</span>)
+
+2. &quot;격차가 가장 큰 칸부터 손대는 것을 그만둔다&quot;  [하지 말 것]
+   고객사 D사가 <b><span class="num">87.41%</span></b> (<span class="num">2,187</span> / <span class="num">2,502</span>) 로 세 축 통틀어 격차 최대(<b><span class="num">4.18%p</span></b> · vs C사 <span class="num">91.59%</span> <span class="num">8,232</span>/<span class="num">8,988</span>) 다. 그런데 비중이 <b><span class="num">3.36%</span></b> (74,419건 중) 라 <b>전부 고쳐도 105건</b>이다. 크기 1위인 차종 V6 는 격차가 더 작은데(<span class="num">3.12%p</span>) 비중이 <b><span class="num">12.80%</span></b> 라 <b>297건</b> — <b>2.8배</b>. 반대쪽도 같다: E사는 비중 <span class="num">38.16%</span> 로 최대인데 격차 <span class="num">0.88%p</span> 라 250건
+
+3. &quot;&quot;완제품을 더 빨리 내보내자&quot;를 그만둔다&quot;  [하지 말 것]
+   검사→출하 체류가 <b>19일</b>로 전체 36일의 <b><span class="num">52.8%</span></b> 라 가장 길다(다음은 사출→지그삽입 3일). 그러나 출하 <b>76,440건 중 <span class="num">86.0%</span>(65,766건)가 납기보다 일찍</b> 나간다 — 중앙 <b>+4일</b>, 일찍 나간 건의 중앙 여유 <b>5일</b>. 당일 <span class="num">9.0%</span>(6,866건) · 늦은 건 <span class="num">5.0%</span>(3,808건). <b>19일은 병목이 아니라 납기 대기</b>다
+
+4. &quot;색상 묶음 순서 실험을 배정을 고쳐 다시 돌린다&quot;  [다시 할 것]
+   색상 블루의 납기 준수율이 <b><span class="num">89.32%</span></b> (<span class="num">11,094</span> / <span class="num">12,420</span>) 로 실버 <b><span class="num">91.37%</span></b> (<span class="num">15,164</span> / <span class="num">16,597</span>) 보다 <b><span class="num">2.04%p</span></b> 낮다. 비중 <b><span class="num">16.69%</span></b> · 크기 환산 <b>254건</b>(전 축 2위). 손을 쓸 방법으로 설계된 EXP-002(색상 묶음 순서 조정)는 배정이 <b><span class="num">5,201</span> : <span class="num">3,199</span> = 61.9:38.1</b> 로 깨져(p=8.9e-106) <b>무효</b> 판정이다 — 표본 8,400건·55일은 충분한데 <b>배정만 깨졌다</b>
+
+5. &quot;지시서 조기 발행 실험을 표본·기간을 채워 다시 돌린다&quot;  [다시 할 것]
+   EXP-003(지시서 조기 발행)이 <b>표본 64건</b>(최소 100) · <b>기간 11일</b>(최소 28) 로 <b>무효</b> 판정이다. 배정은 25 : 39 로 정상(p=0.080) — <b>깨진 것은 배정이 아니라 규모</b>다. 남은 것은 표본 36건·기간 17일
+
+6. &quot;차종 V6 의 납기 준수율 격차를 좁힌다&quot;  [할 것]
+   차종 V6 의 납기 준수율이 <b><span class="num">88.41%</span></b> (<span class="num">8,419</span> / <span class="num">9,523</span>) 로 축 최고 칸 V1 <b><span class="num">91.53%</span></b> (<span class="num">21,825</span> / <span class="num">23,845</span>) 보다 <b><span class="num">3.12%p</span></b> 낮다. 비중 <b><span class="num">12.80%</span></b> (납기 도래 완주 코호트 74,419건 중) · 크기 <b>격차 × 비중 = 39.9 · 건수 환산 297건</b> — <b>전 축 통틀어 1위</b>. 한 건 흔들림 <span class="num">0.011%p</span> 로 격차의 1/284 라 표본 탓이 아니다</p><h2 class="sec">부록 B · 방법</h2><table><tbody><tr><th>분석 단위</th><td>발주 1건(수주ID) · 단계별 최초 도달만 센다</td></tr><tr><th>기간</th><td class="num">2025-09-01 ~ 2026-08-29</td></tr><tr><th>판정 기준</th><td class="num">표본 100건 · 코호트 61일 · 효과 최소 1.5%p</td></tr><tr><th>가정값</th><td>효과의 <b>관측</b>과 <b>추정</b>을 카드에서 라벨로 갈라 적었다. <b>실측값과 섞지 않았다</b></td></tr></tbody></table><h2 class="sec">부록 C · 한계</h2><ol class="small" style="line-height:2"><li>데이터가 <b>전부 합성</b>이다 — 방법은 확인할 수 있으나 판정은 실데이터로만 할 수 있다</li><li>축별 격차는 생성기에 심은 값이다. 실데이터에서 같은 격차가 나올지는 확인되지 않았다</li><li>비용은 카드 전부 <b>미확인</b>이다 — 데이터 밖이라 사람이 채워야 한다</li></ol></div></div>
+</body>
+</html>

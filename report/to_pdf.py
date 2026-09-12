@@ -254,6 +254,32 @@ def _body(pdf: Report, text: str) -> None:
         pdf.ln(GAP)
 
 
+# ★ 2026-09-09 — **폰트에 없는 글자는 조용히 네모로 나간다.**
+#   fpdf2 는 경고를 stderr 로만 흘리는데, 화면으로 앱을 돌리는 사람에게는
+#   그 경고가 보이지 않는다. PDF 를 열어야 알고, 열어도 못 알아본다.
+#   실제로 걸린 것: 「」(U+300C/D) · ←(U+2190) — 우리 NotoSansKR 에 없다.
+#   ⚠️ **매체마다 글자를 바꾸지 않는다.** 폰트가 못 그리는 글자는
+#      화면·HTML·PDF 어디서도 안 쓰는 쪽이 맞다 — 한 본문이 매체마다 달라지면
+#      어느 쪽이 원본인지 알 수 없다.
+_CMAP: set[int] | None = None
+
+
+def missing_glyphs(text: str) -> list[str]:
+    """본문에 폰트가 못 그리는 글자가 있으면 돌려준다. 없으면 빈 목록."""
+    global _CMAP
+    if _CMAP is None:
+        try:
+            from fontTools.ttLib import TTFont          # fpdf2 가 물고 온다
+            f = TTFont(FONT_DIR / "NotoSansKR-Regular.ttf")
+            _CMAP = {c for tb in f["cmap"].tables for c in tb.cmap}
+        except Exception:
+            _CMAP = set()                                # 못 읽으면 검사 생략
+    if not _CMAP:
+        return []
+    return sorted({c for c in text
+                   if ord(c) not in _CMAP and not c.isspace()})
+
+
 def build_pdf(sections: list[dict], charts: dict[str, bytes],
               title: str | None = None,
               kpis: list[tuple[str, str, str]] | None = None) -> bytes:

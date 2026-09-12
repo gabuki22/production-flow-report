@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>V6 당김 — 다른 차종 영향 근거</title>
+<style>
+@page{size:A4;margin:18mm 16mm}
+:root{--ink:#111827;--muted:#6b7280;--line:#d1d5db;--hi:#b42318;--soft:#f3f4f6}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+     color:var(--ink);font-size:10.5pt;line-height:1.62;background:#fff}
+.page{max-width:186mm;margin:0 auto;padding:16mm 0}
+h1{font-size:17pt;font-weight:800;margin:0 0 2mm;line-height:1.32;
+   letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:9.5pt;margin-bottom:4mm}
+.meta{display:flex;flex-wrap:wrap;gap:2mm 7mm;font-size:8.5pt;
+      color:var(--muted);border-top:.6pt solid var(--line);
+      border-bottom:.6pt solid var(--line);padding:2mm 0;margin-bottom:6mm}
+.meta b{color:var(--ink);font-weight:600}
+.sum{border:.8pt solid var(--line);border-left:2.4pt solid var(--hi);
+     padding:4mm 5mm;margin-bottom:7mm;page-break-inside:avoid}
+.sum h2{font-size:9pt;font-weight:700;color:var(--hi);margin:0 0 2mm;
+        letter-spacing:.05em}
+.sum p{margin:0 0 1.5mm}
+.sum p:last-child{margin-bottom:0}
+h2.sec{font-size:12.5pt;font-weight:700;margin:7mm 0 0;
+       page-break-after:avoid;page-break-inside:avoid}
+h2.sec .n{color:var(--muted);font-weight:600;display:inline-block;min-width:6mm}
+.q{font-size:8.5pt;color:var(--muted);margin:.5mm 0 3mm;
+   page-break-after:avoid}
+.sec-body{page-break-inside:avoid}
+.sec-body p{margin:0 0 2mm}
+.note{font-size:9pt;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums;font-weight:700}
+.unit{font-size:.86em;font-weight:400}
+.risk{color:var(--hi);font-weight:700}
+figure{margin:3mm 0 0;page-break-inside:avoid}
+table{border-collapse:collapse;width:100%;font-size:9pt;margin:3mm 0;
+      page-break-inside:avoid}
+th,td{border:0;border-bottom:.5pt solid var(--line);padding:1.6mm 2mm;
+      text-align:left}
+th{background:var(--soft);font-weight:600;font-size:8.5pt;color:var(--muted);
+   border-bottom:.8pt solid var(--line)}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
+footer{margin-top:8mm;padding-top:2mm;border-top:.6pt solid var(--line);
+       font-size:8pt;color:var(--muted)}
+@media screen{body{background:#f8fafc}
+  .page{background:#fff;max-width:210mm;padding:18mm 16mm;margin:6mm auto;
+        box-shadow:0 1px 3px rgba(0,0,0,.12)}}
+</style>
+</head>
+<body>
+<div class="page"><h1>V6 납기를 당기면 다른 차종에 번집니까</h1><div class="sub">일정과 품질, 네 가지 숫자로 답합니다 — 제안서 별첨</div><div class="meta"><span>대상 <b>생산 흐름</b></span><span>기간 <b>2025-09-01 ~ 2026-08-29</b></span><span>기준일 <b>2026-08-29</b></span><span>당길 몫 <b>149건</b></span></div><div class="sum"><h2>한 장 요약</h2><p><b>일정</b>　당길 몫은 하루 2.0시간, 전 라인 잔업 여유 384시간의 0.5%입니다. 공정 하나도 1%를 넘지 않습니다.</p><p><b>맞바꿈</b>　지난 10개월 동안 V6가 좋은 달에 다른 차종도 좋았습니다(상관 +0.68). 한쪽을 올리면 한쪽이 내려가는 관계가 데이터에 없습니다.</p><p><b>품질</b>　일이 많은 날(상위 25%)의 불량률 3.52%, 적은 날(하위 25%) 3.61% — 부하와 불량률의 상관 +0.02. V6 불량률 3.58%, 다른 차종 3.54%.</p><p><b>못 본 것</b>　정규 시간을 넘긴 날이 0일이라, 잔업 자체가 불량을 올리는지는 이 기간 데이터로는 볼 수 없습니다. 착수 뒤 매일 보는 이유입니다.</p></div><h2 class="sec"><span class="n">1</span>공정마다 여유가 있습니까</h2><p class="q">149건을 359일로 나눈 하루 몫과, 라인·일자별 잔업 여유의 합(일자 중앙값)</p><div class="sec-body"><table><thead><tr><th>공정</th><th class=r>1건 시간(h)</th><th class=r>하루 필요(h)</th><th class=r>잔업 여유(h)</th><th class=r>지금 가동률</th><th class=r>여유 대비</th></tr></thead><tbody><tr><td>검사</td><td class="r">0.81</td><td class="r">0.34</td><td class="r">64</td><td class="r">81%</td><td class="r">0.5</td></tr><tr><td>도장</td><td class="r">0.52</td><td class="r">0.21</td><td class="r">40</td><td class="r">83%</td><td class="r">0.5</td></tr><tr><td>레이저</td><td class="r">0.40</td><td class="r">0.17</td><td class="r">32</td><td class="r">81%</td><td class="r">0.5</td></tr><tr><td>사출</td><td class="r">2.04</td><td class="r">0.85</td><td class="r">168</td><td class="r">82%</td><td class="r">0.5</td></tr><tr><td>인쇄</td><td class="r">0.61</td><td class="r">0.25</td><td class="r">48</td><td class="r">81%</td><td class="r">0.5</td></tr><tr><td>지그삽입</td><td class="r">0.40</td><td class="r">0.17</td><td class="r">32</td><td class="r">81%</td><td class="r">0.5</td></tr></tbody></table><p class="note">가동률 = 하루 사용 시간 ÷ 정규 시간(인원 × 8h). 여유 대비는 %.</p></div><h2 class="sec"><span class="n">2</span>V6와 다른 차종은 맞바꾸는 관계입니까</h2><p class="q">월별 납기 준수율 — 맞바꿈이면 한쪽이 오를 때 다른 쪽이 내려가야 합니다</p><div class="sec-body"><table><thead><tr><th>월</th><th class=r>V6 (%)</th><th class=r>다른 차종 (%)</th></tr></thead><tbody><tr><td>2025-11</td><td class="r">88.0</td><td class="r">90.7</td></tr><tr><td>2025-12</td><td class="r">88.8</td><td class="r">91.4</td></tr><tr><td>2026-01</td><td class="r">89.1</td><td class="r">91.0</td></tr><tr><td>2026-02</td><td class="r">87.9</td><td class="r">91.0</td></tr><tr><td>2026-03</td><td class="r">89.7</td><td class="r">91.0</td></tr><tr><td>2026-04</td><td class="r">87.5</td><td class="r">91.0</td></tr><tr><td>2026-05</td><td class="r">88.8</td><td class="r">91.1</td></tr><tr><td>2026-06</td><td class="r">88.6</td><td class="r">90.6</td></tr><tr><td>2026-07</td><td class="r">87.9</td><td class="r">91.1</td></tr><tr><td>2026-08</td><td class="r">90.5</td><td class="r">92.2</td></tr></tbody></table><p class="note">상관 +0.68. V6가 좋았던 달 다른 차종 평균 91.3%, 나빴던 달 90.8%. 같은 달에 같이 움직입니다 — 한 달 안의 공통 사정(자재·설비)이 둘 다를 흔든다는 뜻이지, 하나를 살리려 다른 하나를 죽인 흔적이 아닙니다.</p></div><h2 class="sec"><span class="n">3</span>일이 많은 날 불량이 늡니까</h2><p class="q">하루 작업 시간(전 공정 합)을 넷으로 갈라, 구간마다 그날 검사한 불량률</p><div class="sec-body"><table><thead><tr><th>부하 구간</th><th class=r>일수</th><th class=r>하루 작업(h)</th><th class=r>불량률 (%)</th></tr></thead><tbody><tr><td>하위 25%</td><td class="r">90</td><td class="r">1156</td><td class="r">3.61</td></tr><tr><td>25~50%</td><td class="r">90</td><td class="r">1227</td><td class="r">3.56</td></tr><tr><td>50~75%</td><td class="r">89</td><td class="r">1288</td><td class="r">3.49</td></tr><tr><td>상위 25%</td><td class="r">90</td><td class="r">1358</td><td class="r">3.52</td></tr></tbody></table><p class="note">상관 +0.02. 정규 시간(인원 × 8h)을 넘긴 날은 0일 — 지금까지는 잔업 없이 돌았다는 뜻이라, 잔업이 붙었을 때의 불량은 이 표 밖입니다.</p></div><h2 class="sec"><span class="n">4</span>그래서 무엇을 지켜봅니까</h2><div class="sec-body"><p>다른 차종 납기 준수율이 지금보다 3%p 넘게 내려가거나, 불량률이 4%를 넘으면 그날 조치합니다. 둘 다 생산관리가 매일 봅니다.</p><p>이 문서의 숫자는 착수 전 것입니다. 착수 뒤 4주 값을 같은 표로 다시 냅니다.</p></div></div>
+</body>
+</html>
