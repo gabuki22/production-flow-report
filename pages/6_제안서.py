@@ -65,6 +65,15 @@ def _label(c: dict) -> str:
 
 
 ALL = "전체"
+# ★ 추진으로 정한 카드의 주제를 **맨 위에** 둔다 (2026-09-12 기쁨 지시).
+#   값을 박지 않는다 — 카드 「분류」가 "할 것"인 제목에 주제의 축·값("차종 V6")이
+#   들어 있으면 그 주제가 앞이다. 추진 카드가 바뀌면 순서도 따라 바뀐다.
+_할것 = [c["title"] for c in proposal.parse_cards()["cards"] if c.get("분류") == "할 것"]
+def _pinned(c: dict) -> bool:
+    head = c["제목"].split(" 의 ")[0]          # "차종 V6 의 …" → "차종 V6"
+    return " 의 " in c["제목"] and any(head in t for t in _할것)
+살아있는 = sorted(살아있는, key=lambda c: not _pinned(c))   # 안정 정렬 — 나머지 순서는 그대로
+topics = 살아있는 + 기각된
 options = [ALL] + [_label(c) for c in 살아있는 + 기각된]
 picked = st.selectbox("주제", options, index=0)
 
